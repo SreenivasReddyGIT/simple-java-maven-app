@@ -1,29 +1,65 @@
 pipeline {
     agent any
-    tools{
-        jdk 'java'
-         }
+ 
+    tools {
+        maven 'Maven' // Ensure this matches the name of your Maven installation in Jenkins
+    }
+ 
     stages {
-        stage('Build') {
+        stage('Create POM') {
             steps {
-                mvn install    
-                sh 'mvn -B -DskipTests clean package'
-            }
-        }
-        stage('Test') {
-            steps {
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
+                script {
+                    // Create a basic pom.xml file
+                    writeFile file: 'pom.xml', text: """
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+                             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                             xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+<groupId>com.example</groupId>
+<artifactId>my-app</artifactId>
+<version>1.0-SNAPSHOT</version>
+<dependencies>
+<dependency>
+<groupId>junit</groupId>
+<artifactId>junit</artifactId>
+<version>4.13.2</version>
+<scope>test</scope>
+</dependency>
+</dependencies>
+</project>
+                    """
                 }
             }
         }
-        stage('Deliver') {
+ 
+        stage('Build') {
             steps {
-                sh './jenkins/scripts/deliver.sh'
+                // Compile the code and package it into a JAR file
+                sh 'mvn clean package'
+            }
+        }
+ 
+        stage('Test') {
+            steps {
+                // Run the unit tests
+                sh 'mvn test'
             }
         }
     }
+ 
+    post {
+        always {
+            // Clean up workspace after the build
+            cleanWs()
+        }
+        success {
+            // Notify success
+            echo 'Build succeeded!'
+        }
+        failure {
+            // Notify failure
+            echo 'Build failed!'
+        }
+    }
 }
+
